@@ -23,13 +23,16 @@ export async function startServer(port: number) {
     });
 
     // AI Endpoints
+    // Use server-side API key from environment, or allow client to provide their own
+    const getAiApiKey = (clientKey?: string) => clientKey || process.env.DEEPSEEK_API_KEY;
 
     // Analyze a single market
     app.post('/api/ai/analyze', async (req: Request, res: Response, next: NextFunction) => {
         try {
             const { market, apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
 
-            if (!apiKey) {
+            if (!effectiveApiKey) {
                 res.status(400).json({ success: false, error: { message: 'API key is required' } });
                 return;
             }
@@ -40,7 +43,7 @@ export async function startServer(port: number) {
             }
 
             const messages = createMarketAnalysisPrompt(market);
-            const analysis = await chatWithDeepSeek(messages, apiKey);
+            const analysis = await chatWithDeepSeek(messages, effectiveApiKey);
 
             res.json({ success: true, data: { analysis } });
         } catch (error: any) {
@@ -52,8 +55,9 @@ export async function startServer(port: number) {
     app.post('/api/ai/compare', async (req: Request, res: Response, next: NextFunction) => {
         try {
             const { markets, apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
 
-            if (!apiKey) {
+            if (!effectiveApiKey) {
                 res.status(400).json({ success: false, error: { message: 'API key is required' } });
                 return;
             }
@@ -64,7 +68,7 @@ export async function startServer(port: number) {
             }
 
             const messages = createComparisonPrompt(markets);
-            const comparison = await chatWithDeepSeek(messages, apiKey);
+            const comparison = await chatWithDeepSeek(messages, effectiveApiKey);
 
             res.json({ success: true, data: { comparison } });
         } catch (error: any) {
@@ -76,8 +80,9 @@ export async function startServer(port: number) {
     app.post('/api/ai/chat', async (req: Request, res: Response, next: NextFunction) => {
         try {
             const { message, marketContext, apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
 
-            if (!apiKey) {
+            if (!effectiveApiKey) {
                 res.status(400).json({ success: false, error: { message: 'API key is required' } });
                 return;
             }
@@ -88,7 +93,7 @@ export async function startServer(port: number) {
             }
 
             const messages = createChatPrompt(message, marketContext);
-            const response = await chatWithDeepSeek(messages, apiKey);
+            const response = await chatWithDeepSeek(messages, effectiveApiKey);
 
             res.json({ success: true, data: { response } });
         } catch (error: any) {

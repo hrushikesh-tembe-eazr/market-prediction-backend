@@ -23,11 +23,14 @@ async function startServer(port) {
         res.json({ status: 'ok', timestamp: Date.now() });
     });
     // AI Endpoints
+    // Use server-side API key from environment, or allow client to provide their own
+    const getAiApiKey = (clientKey) => clientKey || process.env.DEEPSEEK_API_KEY;
     // Analyze a single market
     app.post('/api/ai/analyze', async (req, res, next) => {
         try {
             const { market, apiKey } = req.body;
-            if (!apiKey) {
+            const effectiveApiKey = getAiApiKey(apiKey);
+            if (!effectiveApiKey) {
                 res.status(400).json({ success: false, error: { message: 'API key is required' } });
                 return;
             }
@@ -36,7 +39,7 @@ async function startServer(port) {
                 return;
             }
             const messages = (0, deepseek_1.createMarketAnalysisPrompt)(market);
-            const analysis = await (0, deepseek_1.chatWithDeepSeek)(messages, apiKey);
+            const analysis = await (0, deepseek_1.chatWithDeepSeek)(messages, effectiveApiKey);
             res.json({ success: true, data: { analysis } });
         }
         catch (error) {
@@ -47,7 +50,8 @@ async function startServer(port) {
     app.post('/api/ai/compare', async (req, res, next) => {
         try {
             const { markets, apiKey } = req.body;
-            if (!apiKey) {
+            const effectiveApiKey = getAiApiKey(apiKey);
+            if (!effectiveApiKey) {
                 res.status(400).json({ success: false, error: { message: 'API key is required' } });
                 return;
             }
@@ -56,7 +60,7 @@ async function startServer(port) {
                 return;
             }
             const messages = (0, deepseek_1.createComparisonPrompt)(markets);
-            const comparison = await (0, deepseek_1.chatWithDeepSeek)(messages, apiKey);
+            const comparison = await (0, deepseek_1.chatWithDeepSeek)(messages, effectiveApiKey);
             res.json({ success: true, data: { comparison } });
         }
         catch (error) {
@@ -67,7 +71,8 @@ async function startServer(port) {
     app.post('/api/ai/chat', async (req, res, next) => {
         try {
             const { message, marketContext, apiKey } = req.body;
-            if (!apiKey) {
+            const effectiveApiKey = getAiApiKey(apiKey);
+            if (!effectiveApiKey) {
                 res.status(400).json({ success: false, error: { message: 'API key is required' } });
                 return;
             }
@@ -76,7 +81,7 @@ async function startServer(port) {
                 return;
             }
             const messages = (0, deepseek_1.createChatPrompt)(message, marketContext);
-            const response = await (0, deepseek_1.chatWithDeepSeek)(messages, apiKey);
+            const response = await (0, deepseek_1.chatWithDeepSeek)(messages, effectiveApiKey);
             res.json({ success: true, data: { response } });
         }
         catch (error) {
