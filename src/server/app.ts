@@ -14,6 +14,31 @@ import {
     explainMarket
 } from '../ai/advanced-features';
 
+// Indian Stock Market imports
+import {
+    getStockQuote,
+    getMultipleQuotes,
+    getNifty50,
+    getBankNifty,
+    getAllIndices,
+    getMarketStatus,
+    getTopGainers,
+    getTopLosers,
+    getMostActive,
+    searchStocks,
+    getHistoricalData,
+    POPULAR_STOCKS,
+    SECTOR_INDICES
+} from '../stocks/nse-service';
+import {
+    analyzeStock,
+    analyzeMarketSentiment,
+    getStockRecommendations,
+    compareStocks,
+    explainStock,
+    chatAboutStocks
+} from '../stocks/stock-ai';
+
 // Singleton instances for local usage (when no credentials provided)
 const defaultExchanges: Record<string, any> = {
     polymarket: null,
@@ -270,6 +295,282 @@ export async function startServer(port: number) {
 
             const result = await explainMarket(market, expertiseLevel, effectiveApiKey);
             res.json({ success: true, data: result });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // ============================================
+    // INDIAN STOCK MARKET ENDPOINTS (NSE)
+    // ============================================
+
+    // Get NIFTY 50 data
+    app.get('/api/stocks/nifty50', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const data = await getNifty50();
+            res.json({ success: true, data });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // Get Bank NIFTY data
+    app.get('/api/stocks/banknifty', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const data = await getBankNifty();
+            res.json({ success: true, data });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // Get all indices
+    app.get('/api/stocks/indices', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const data = await getAllIndices();
+            res.json({ success: true, data });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // Get market status
+    app.get('/api/stocks/market-status', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const data = await getMarketStatus();
+            res.json({ success: true, data });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // Get single stock quote
+    app.get('/api/stocks/quote/:symbol', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const symbol = req.params.symbol as string;
+            const data = await getStockQuote(symbol);
+            res.json({ success: true, data });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // Get multiple stock quotes
+    app.post('/api/stocks/quotes', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { symbols } = req.body;
+            if (!symbols || !Array.isArray(symbols)) {
+                res.status(400).json({ success: false, error: { message: 'Symbols array is required' } });
+                return;
+            }
+            const data = await getMultipleQuotes(symbols);
+            res.json({ success: true, data });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // Get top gainers
+    app.get('/api/stocks/gainers', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const index = (req.query.index as string) || 'NIFTY 50';
+            const data = await getTopGainers(index);
+            res.json({ success: true, data });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // Get top losers
+    app.get('/api/stocks/losers', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const index = (req.query.index as string) || 'NIFTY 50';
+            const data = await getTopLosers(index);
+            res.json({ success: true, data });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // Get most active stocks
+    app.get('/api/stocks/most-active', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const index = (req.query.index as string) || 'NIFTY 50';
+            const data = await getMostActive(index);
+            res.json({ success: true, data });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // Search stocks
+    app.get('/api/stocks/search', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const query = req.query.q as string;
+            if (!query) {
+                res.status(400).json({ success: false, error: { message: 'Query parameter q is required' } });
+                return;
+            }
+            const data = await searchStocks(query);
+            res.json({ success: true, data });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // Get historical data
+    app.get('/api/stocks/history/:symbol', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const symbol = req.params.symbol as string;
+            const days = parseInt(req.query.days as string) || 30;
+            const data = await getHistoricalData(symbol, days);
+            res.json({ success: true, data });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // Get popular stocks list
+    app.get('/api/stocks/popular', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            res.json({ success: true, data: { stocks: POPULAR_STOCKS, indices: SECTOR_INDICES } });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // ============================================
+    // INDIAN STOCK AI ENDPOINTS
+    // ============================================
+
+    // AI Stock Analysis
+    app.post('/api/stocks/ai/analyze', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { stock, apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
+
+            if (!effectiveApiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+
+            if (!stock) {
+                res.status(400).json({ success: false, error: { message: 'Stock data is required' } });
+                return;
+            }
+
+            const result = await analyzeStock(stock, effectiveApiKey);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // AI Market Sentiment
+    app.post('/api/stocks/ai/sentiment', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { nifty, bankNifty, gainers, losers, apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
+
+            if (!effectiveApiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+
+            const result = await analyzeMarketSentiment(nifty, bankNifty, gainers, losers, effectiveApiKey);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // AI Stock Recommendations
+    app.post('/api/stocks/ai/recommend', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { stocks, investmentAmount, riskProfile = 'moderate', apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
+
+            if (!effectiveApiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+
+            if (!stocks || !Array.isArray(stocks)) {
+                res.status(400).json({ success: false, error: { message: 'Stocks array is required' } });
+                return;
+            }
+
+            const result = await getStockRecommendations(stocks, investmentAmount || 100000, riskProfile, effectiveApiKey);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // AI Stock Comparison
+    app.post('/api/stocks/ai/compare', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { stocks, apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
+
+            if (!effectiveApiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+
+            if (!stocks || !Array.isArray(stocks) || stocks.length < 2) {
+                res.status(400).json({ success: false, error: { message: 'At least 2 stocks are required for comparison' } });
+                return;
+            }
+
+            const result = await compareStocks(stocks, effectiveApiKey);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // AI Stock Explainer
+    app.post('/api/stocks/ai/explain', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { stock, apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
+
+            if (!effectiveApiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+
+            if (!stock) {
+                res.status(400).json({ success: false, error: { message: 'Stock data is required' } });
+                return;
+            }
+
+            const result = await explainStock(stock, effectiveApiKey);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // AI Stock Chat
+    app.post('/api/stocks/ai/chat', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { message, stockContext, apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
+
+            if (!effectiveApiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+
+            if (!message) {
+                res.status(400).json({ success: false, error: { message: 'Message is required' } });
+                return;
+            }
+
+            const response = await chatAboutStocks(message, stockContext, effectiveApiKey);
+            res.json({ success: true, data: { response } });
         } catch (error: any) {
             next(error);
         }
