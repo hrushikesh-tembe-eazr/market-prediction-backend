@@ -8,20 +8,21 @@ interface Message {
   content: string;
 }
 
-async function chatWithAI(messages: Message[], apiKey: string): Promise<string> {
+async function chatWithAI(messages: Message[], apiKey: string, maxTokens: number = 1500): Promise<string> {
   const response = await axios.post(
     DEEPSEEK_API_URL,
     {
       model: 'deepseek-chat',
       messages,
       temperature: 0.7,
-      max_tokens: 1500,
+      max_tokens: maxTokens,
     },
     {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
+      timeout: 30000, // 30 second timeout
     }
   );
   return response.data.choices[0]?.message?.content || '';
@@ -60,17 +61,17 @@ Format response EXACTLY as:
       role: 'user',
       content: `Analyze this Indian stock:
 
-Symbol: ${stock.symbol}
-Company: ${stock.companyName}
-Current Price: ₹${stock.lastPrice.toLocaleString('en-IN')}
-Day Change: ${stock.change > 0 ? '+' : ''}${stock.change.toFixed(2)} (${stock.pChange > 0 ? '+' : ''}${stock.pChange.toFixed(2)}%)
-Open: ₹${stock.open.toLocaleString('en-IN')}
-Day High: ₹${stock.dayHigh.toLocaleString('en-IN')}
-Day Low: ₹${stock.dayLow.toLocaleString('en-IN')}
-Previous Close: ₹${stock.previousClose.toLocaleString('en-IN')}
-52-Week High: ₹${stock.yearHigh.toLocaleString('en-IN')}
-52-Week Low: ₹${stock.yearLow.toLocaleString('en-IN')}
-Volume: ${stock.totalTradedVolume.toLocaleString('en-IN')}
+Symbol: ${stock.symbol || 'N/A'}
+Company: ${stock.companyName || stock.symbol || 'Unknown'}
+Current Price: ₹${(stock.lastPrice || 0).toLocaleString('en-IN')}
+Day Change: ${(stock.change || 0) > 0 ? '+' : ''}${(stock.change || 0).toFixed(2)} (${(stock.pChange || 0) > 0 ? '+' : ''}${(stock.pChange || 0).toFixed(2)}%)
+Open: ₹${(stock.open || 0).toLocaleString('en-IN')}
+Day High: ₹${(stock.dayHigh || 0).toLocaleString('en-IN')}
+Day Low: ₹${(stock.dayLow || 0).toLocaleString('en-IN')}
+Previous Close: ₹${(stock.previousClose || 0).toLocaleString('en-IN')}
+52-Week High: ₹${(stock.yearHigh || 0).toLocaleString('en-IN')}
+52-Week Low: ₹${(stock.yearLow || 0).toLocaleString('en-IN')}
+Volume: ${(stock.totalTradedVolume || 0).toLocaleString('en-IN')}
 ${stock.industry ? `Industry: ${stock.industry}` : ''}
 ${stock.perChange30d ? `30-Day Change: ${stock.perChange30d.toFixed(2)}%` : ''}
 ${stock.perChange365d ? `1-Year Change: ${stock.perChange365d.toFixed(2)}%` : ''}`
@@ -137,19 +138,19 @@ Format response EXACTLY as:
       content: `Analyze Indian market sentiment:
 
 NIFTY 50:
-- Current: ${nifty.current.toLocaleString('en-IN')}
-- Change: ${nifty.change > 0 ? '+' : ''}${nifty.change.toFixed(2)} (${nifty.pChange > 0 ? '+' : ''}${nifty.pChange.toFixed(2)}%)
-- Day Range: ${nifty.low.toLocaleString('en-IN')} - ${nifty.high.toLocaleString('en-IN')}
+- Current: ${(nifty.current || 0).toLocaleString('en-IN')}
+- Change: ${(nifty.change || 0) > 0 ? '+' : ''}${(nifty.change || 0).toFixed(2)} (${(nifty.pChange || 0) > 0 ? '+' : ''}${(nifty.pChange || 0).toFixed(2)}%)
+- Day Range: ${(nifty.low || 0).toLocaleString('en-IN')} - ${(nifty.high || 0).toLocaleString('en-IN')}
 
 BANK NIFTY:
-- Current: ${bankNifty.current.toLocaleString('en-IN')}
-- Change: ${bankNifty.change > 0 ? '+' : ''}${bankNifty.change.toFixed(2)} (${bankNifty.pChange > 0 ? '+' : ''}${bankNifty.pChange.toFixed(2)}%)
+- Current: ${(bankNifty.current || 0).toLocaleString('en-IN')}
+- Change: ${(bankNifty.change || 0) > 0 ? '+' : ''}${(bankNifty.change || 0).toFixed(2)} (${(bankNifty.pChange || 0) > 0 ? '+' : ''}${(bankNifty.pChange || 0).toFixed(2)}%)
 
 Top Gainers:
-${gainers.slice(0, 5).map(g => `- ${g.symbol}: +${g.pChange.toFixed(2)}%`).join('\n')}
+${(gainers || []).slice(0, 5).map(g => `- ${g.symbol}: +${(g.pChange || 0).toFixed(2)}%`).join('\n')}
 
 Top Losers:
-${losers.slice(0, 5).map(l => `- ${l.symbol}: ${l.pChange.toFixed(2)}%`).join('\n')}`
+${(losers || []).slice(0, 5).map(l => `- ${l.symbol}: ${(l.pChange || 0).toFixed(2)}%`).join('\n')}`
     }
   ];
 
@@ -304,13 +305,13 @@ Format response EXACTLY as:
       role: 'user',
       content: `Compare these Indian stocks:
 
-${stocks.map(s => `
-${s.symbol} (${s.companyName}):
-- Price: ₹${s.lastPrice.toLocaleString('en-IN')}
-- Day Change: ${s.pChange > 0 ? '+' : ''}${s.pChange.toFixed(2)}%
-- 52W High: ₹${s.yearHigh.toLocaleString('en-IN')}
-- 52W Low: ₹${s.yearLow.toLocaleString('en-IN')}
-- Volume: ${s.totalTradedVolume.toLocaleString('en-IN')}
+${(stocks || []).map(s => `
+${s.symbol || 'N/A'} (${s.companyName || s.symbol || 'Unknown'}):
+- Price: ₹${(s.lastPrice || 0).toLocaleString('en-IN')}
+- Day Change: ${(s.pChange || 0) > 0 ? '+' : ''}${(s.pChange || 0).toFixed(2)}%
+- 52W High: ₹${(s.yearHigh || 0).toLocaleString('en-IN')}
+- 52W Low: ₹${(s.yearLow || 0).toLocaleString('en-IN')}
+- Volume: ${(s.totalTradedVolume || 0).toLocaleString('en-IN')}
 `).join('\n')}`
     }
   ];
@@ -365,10 +366,10 @@ Format response EXACTLY as:
       role: 'user',
       content: `Explain this stock to a beginner investor:
 
-Company: ${stock.companyName} (${stock.symbol})
-Current Price: ₹${stock.lastPrice.toLocaleString('en-IN')}
-Today's Change: ${stock.change > 0 ? '+' : ''}${stock.change.toFixed(2)} (${stock.pChange > 0 ? '+' : ''}${stock.pChange.toFixed(2)}%)
-52-Week Range: ₹${stock.yearLow.toLocaleString('en-IN')} - ₹${stock.yearHigh.toLocaleString('en-IN')}
+Company: ${stock.companyName || stock.symbol || 'Unknown'} (${stock.symbol || 'N/A'})
+Current Price: ₹${(stock.lastPrice || 0).toLocaleString('en-IN')}
+Today's Change: ${(stock.change || 0) > 0 ? '+' : ''}${(stock.change || 0).toFixed(2)} (${(stock.pChange || 0) > 0 ? '+' : ''}${(stock.pChange || 0).toFixed(2)}%)
+52-Week Range: ₹${(stock.yearLow || 0).toLocaleString('en-IN')} - ₹${(stock.yearHigh || 0).toLocaleString('en-IN')}
 ${stock.industry ? `Industry: ${stock.industry}` : ''}`
     }
   ];
@@ -414,10 +415,10 @@ Key points:
 
 ${stockContext ? `
 Current stock context:
-Symbol: ${stockContext.symbol}
-Company: ${stockContext.companyName}
-Price: ₹${stockContext.lastPrice.toLocaleString('en-IN')}
-Change: ${stockContext.pChange > 0 ? '+' : ''}${stockContext.pChange.toFixed(2)}%
+Symbol: ${stockContext.symbol || 'N/A'}
+Company: ${stockContext.companyName || stockContext.symbol || 'Unknown'}
+Price: ₹${(stockContext.lastPrice || 0).toLocaleString('en-IN')}
+Change: ${(stockContext.pChange || 0) > 0 ? '+' : ''}${(stockContext.pChange || 0).toFixed(2)}%
 ` : ''}
 
 Provide helpful, accurate information. If you're unsure, say so.`;
@@ -427,5 +428,5 @@ Provide helpful, accurate information. If you're unsure, say so.`;
     { role: 'user', content: message }
   ];
 
-  return await chatWithAI(messages, apiKey);
+  return await chatWithAI(messages, apiKey, 800); // Faster chat with fewer tokens
 }
