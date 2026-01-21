@@ -8,6 +8,7 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const polymarket_1 = require("../exchanges/polymarket");
 const kalshi_1 = require("../exchanges/kalshi");
+const deepseek_1 = require("../ai/deepseek");
 // Singleton instances for local usage (when no credentials provided)
 const defaultExchanges = {
     polymarket: null,
@@ -20,6 +21,67 @@ async function startServer(port) {
     // Health check
     app.get('/health', (req, res) => {
         res.json({ status: 'ok', timestamp: Date.now() });
+    });
+    // AI Endpoints
+    // Analyze a single market
+    app.post('/api/ai/analyze', async (req, res, next) => {
+        try {
+            const { market, apiKey } = req.body;
+            if (!apiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+            if (!market) {
+                res.status(400).json({ success: false, error: { message: 'Market data is required' } });
+                return;
+            }
+            const messages = (0, deepseek_1.createMarketAnalysisPrompt)(market);
+            const analysis = await (0, deepseek_1.chatWithDeepSeek)(messages, apiKey);
+            res.json({ success: true, data: { analysis } });
+        }
+        catch (error) {
+            next(error);
+        }
+    });
+    // Compare multiple markets
+    app.post('/api/ai/compare', async (req, res, next) => {
+        try {
+            const { markets, apiKey } = req.body;
+            if (!apiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+            if (!markets || !Array.isArray(markets) || markets.length < 2) {
+                res.status(400).json({ success: false, error: { message: 'At least 2 markets are required for comparison' } });
+                return;
+            }
+            const messages = (0, deepseek_1.createComparisonPrompt)(markets);
+            const comparison = await (0, deepseek_1.chatWithDeepSeek)(messages, apiKey);
+            res.json({ success: true, data: { comparison } });
+        }
+        catch (error) {
+            next(error);
+        }
+    });
+    // General chat about markets
+    app.post('/api/ai/chat', async (req, res, next) => {
+        try {
+            const { message, marketContext, apiKey } = req.body;
+            if (!apiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+            if (!message) {
+                res.status(400).json({ success: false, error: { message: 'Message is required' } });
+                return;
+            }
+            const messages = (0, deepseek_1.createChatPrompt)(message, marketContext);
+            const response = await (0, deepseek_1.chatWithDeepSeek)(messages, apiKey);
+            res.json({ success: true, data: { response } });
+        }
+        catch (error) {
+            next(error);
+        }
     });
     // API endpoint: POST /api/:exchange/:method
     // Body: { args: any[], credentials?: ExchangeCredentials }
