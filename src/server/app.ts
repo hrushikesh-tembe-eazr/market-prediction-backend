@@ -4,6 +4,15 @@ import { PolymarketExchange } from '../exchanges/polymarket';
 import { KalshiExchange } from '../exchanges/kalshi';
 import { ExchangeCredentials } from '../BaseExchange';
 import { chatWithDeepSeek, createMarketAnalysisPrompt, createComparisonPrompt, createChatPrompt } from '../ai/deepseek';
+import {
+    analyzeNewsImpact,
+    getPortfolioAdvice,
+    detectAnomalies,
+    calculateSentimentScore,
+    predictPrice,
+    generateSmartAlerts,
+    explainMarket
+} from '../ai/advanced-features';
 
 // Singleton instances for local usage (when no credentials provided)
 const defaultExchanges: Record<string, any> = {
@@ -96,6 +105,171 @@ export async function startServer(port: number) {
             const response = await chatWithDeepSeek(messages, effectiveApiKey);
 
             res.json({ success: true, data: { response } });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // ============================================
+    // ADVANCED AI FEATURES
+    // ============================================
+
+    // AI News Correlation - Find news affecting markets
+    app.post('/api/ai/news-impact', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { market, apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
+
+            if (!effectiveApiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+
+            if (!market) {
+                res.status(400).json({ success: false, error: { message: 'Market data is required' } });
+                return;
+            }
+
+            const result = await analyzeNewsImpact(market, effectiveApiKey);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // AI Portfolio Advisor - Smart position recommendations
+    app.post('/api/ai/portfolio-advice', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { markets, riskTolerance = 'moderate', apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
+
+            if (!effectiveApiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+
+            if (!markets || !Array.isArray(markets) || markets.length === 0) {
+                res.status(400).json({ success: false, error: { message: 'Markets array is required' } });
+                return;
+            }
+
+            const result = await getPortfolioAdvice(markets, riskTolerance, effectiveApiKey);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // AI Anomaly Detector - Unusual price movements
+    app.post('/api/ai/anomalies', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { markets, apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
+
+            if (!effectiveApiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+
+            if (!markets || !Array.isArray(markets) || markets.length === 0) {
+                res.status(400).json({ success: false, error: { message: 'Markets array is required' } });
+                return;
+            }
+
+            const result = await detectAnomalies(markets, effectiveApiKey);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // AI Sentiment Score - Comprehensive market sentiment
+    app.post('/api/ai/sentiment', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { market, apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
+
+            if (!effectiveApiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+
+            if (!market) {
+                res.status(400).json({ success: false, error: { message: 'Market data is required' } });
+                return;
+            }
+
+            const result = await calculateSentimentScore(market, effectiveApiKey);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // AI Price Prediction - With confidence intervals
+    app.post('/api/ai/predict', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { market, timeframe = '24h', apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
+
+            if (!effectiveApiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+
+            if (!market) {
+                res.status(400).json({ success: false, error: { message: 'Market data is required' } });
+                return;
+            }
+
+            const result = await predictPrice(market, timeframe, effectiveApiKey);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // AI Smart Alerts - Personalized alert conditions
+    app.post('/api/ai/smart-alerts', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { market, apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
+
+            if (!effectiveApiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+
+            if (!market) {
+                res.status(400).json({ success: false, error: { message: 'Market data is required' } });
+                return;
+            }
+
+            const result = await generateSmartAlerts(market, effectiveApiKey);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            next(error);
+        }
+    });
+
+    // AI Market Explainer - For beginners
+    app.post('/api/ai/explain', async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { market, expertiseLevel = 'beginner', apiKey } = req.body;
+            const effectiveApiKey = getAiApiKey(apiKey);
+
+            if (!effectiveApiKey) {
+                res.status(400).json({ success: false, error: { message: 'API key is required' } });
+                return;
+            }
+
+            if (!market) {
+                res.status(400).json({ success: false, error: { message: 'Market data is required' } });
+                return;
+            }
+
+            const result = await explainMarket(market, expertiseLevel, effectiveApiKey);
+            res.json({ success: true, data: result });
         } catch (error: any) {
             next(error);
         }
